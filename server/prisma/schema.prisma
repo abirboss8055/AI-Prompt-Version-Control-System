@@ -1,0 +1,58 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         String    @id @default(uuid())
+  email      String    @unique
+  username   String?
+  projects   Project[]
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  user_id     String
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  prompts     Prompt[]
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model Prompt {
+  id              String   @id @default(uuid())
+  project_id      String
+  project         Project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+
+  // Self-referencing branch relation
+  parent_id       String?
+  parent          Prompt?  @relation("PromptBranches", fields: [parent_id], references: [id], onDelete: SetNull)
+  branches        Prompt[] @relation("PromptBranches")
+
+  prompt_text     String   @db.Text
+  negative_prompt String?  @db.Text
+  image_url       String?
+  settings        Json     @default("{}") @db.JsonB
+  version         Int      @default(1)
+  branch_label    String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@index([project_id])
+  @@index([parent_id])
+  @@map("prompts")
+}
